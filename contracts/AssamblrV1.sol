@@ -324,12 +324,9 @@ contract AssamblrV1 {
         return(0xa0, 0x20)
       }
       // function transferFrom(address _from, address _to, uint256 _tokenId) external override {}
-      // function safeTransferFrom(address _from, address _to, uint256 _tokenId) external override {}
-      // function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes calldata _data) external override {}
-      // find a way to add multiple case statements for the same function
       case 0x23b872dd {
         // store the tokenId in slot 0x60
-        calldatacopy(0x20, 0x04, 0x20)
+        calldatacopy(0x20, 0x04, 0x60)
         
         // check if the caller is approved for the tokenId
         if iszero(mload(approvedOrOwner(0x20))) {
@@ -345,6 +342,52 @@ contract AssamblrV1 {
         _transfer_unsafe(0x20, 0x40, 0x60)
 
         // TODO: raise events
+      }
+      // function safeTransferFrom(address _from, address _to, uint256 _tokenId) external override {}
+      case 0x42842e0e {
+        // call transferFrom
+        calldatacopy(0, 0, calldatasize())
+
+        // change selector to safeTransferFrom with data 0xb88d4fde
+        mstore8(0x00, 0xb8)
+        mstore(0x01, 0x8d)
+        mstore(0x20, 0x4f)
+        mstore(0x40, 0xde)
+
+        // Add 0x20 to calldatasize for empty string
+        let result := delegatecall(gas(), address(), 0x00, add(calldatasize(), 0x40), 0x00, 0x00)
+
+        switch result
+        case 0 {
+          revert(0, 0)
+        }
+        default {
+          return(0x00, 0x00)
+        }
+      }
+      // function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes calldata _data) external override {}
+      case 0xb88d4fde {
+        // call transferFrom
+        // ignore _data for the moment
+        calldatacopy(0, 0, 0x64)
+
+        // change selector to transferFrom
+        mstore8(0x00, 0x23)
+        mstore(0x01, 0xb8)
+        mstore(0x20, 0x72)
+        mstore(0x40, 0xdd)
+
+        // call data is 0x64 (selector + _from + _to + _tokenId)
+        let result := delegatecall(gas(), address(), 0x00, 0x64, 0x00, 0x00)
+
+        switch result
+        case 0 {
+          revert(0, 0)
+        }
+        default {
+          // todo check safe transfer
+          return(0x00, 0x00)
+        }
       }
       // function supportsInterface(bytes4 interfaceID) external view override returns (bool) {}
       case 0x01ffc9a7 {
@@ -367,7 +410,7 @@ contract AssamblrV1 {
       case 0xc87b56dd {
         // TODO: implement
       }
-      
+
     }
   }
 }
