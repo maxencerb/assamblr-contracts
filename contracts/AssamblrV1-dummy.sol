@@ -16,6 +16,8 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
   function balanceOf(address _owner) external view override returns (uint256 _balance) {}
 
+  function totalSupply() external view returns (uint256 _totalSupply) {}
+
   function ownerOf(uint256 _tokenId) external view override returns (address _owner) {}
 
   function approve(address _to, uint256 _tokenId) external override {}
@@ -35,4 +37,14 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
   function supportsInterface(bytes4 _interfaceId) external view override returns (bool _supported) {}
 
   function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
+
+  function owner() public view virtual returns (address) {}
+
+  function transferOwnership(address newOwner) public virtual {}
+
+  function renounceOwnership() public virtual {}
+
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+  function mint(address to) public virtual {}
 }

@@ -3,7 +3,9 @@ import { ethers } from "hardhat";
 async function main() {
   const [ signer ] = await ethers.getSigners();
   const contract = await ethers.getContractFactory("AssamblrV1Dummy");
-  const contractInstance = await contract.deploy("AssamblrV1", "ASSM", signer.address);
+
+  // Just to get the contract interface
+  const contractInstance = contract.attach(signer.address);
 
   const sigs = Object.keys(contractInstance.interface.functions);
 
@@ -13,6 +15,9 @@ async function main() {
   }, {} as Record<string, string>);
 
   console.log(JSON.stringify(sigHashes, null, 2));
+
+  const txData = contractInstance.interface.encodeFunctionData("setApprovalForAll", [signer.address, true]);
+  console.log(txData);
 }
 
 main()
