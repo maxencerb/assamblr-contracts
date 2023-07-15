@@ -12,8 +12,6 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
   function name() external view override returns (string memory _name) {}
 
-  function name2() external view returns (string memory _name) {}
-
   function symbol() external view override returns (string memory _symbol) {}
 
   function balanceOf(address _owner) external view override returns (uint256 _balance) {}
