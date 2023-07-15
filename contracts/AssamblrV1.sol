@@ -349,11 +349,25 @@ contract AssamblrV1 {
       // function supportsInterface(bytes4 interfaceID) external view override returns (bool) {}
       case 0x01ffc9a7 {
         // copy interfaceID to slot 0x20
-        calldatacopy(0x20, 0x04, 0x04)
-
-        // return true if interfaceID is 0x80ac58cd
-        return(0x20, eq(mload(0x20), 0x80ac58cd))
+        calldatacopy(0x3c, 0x04, 0x04)
+        mstore(0x40, 0x1)
+        mstore(0x60, 0x0)
+        if eq(mload(0x20), 0x01ffc9a7) {
+          return (0x40, 0x20)
+        }
+        if eq(mload(0x20), 0x80ac58cd) {
+          return (0x40, 0x20)
+        }
+        if eq(mload(0x20), 0x5b5e139f) {
+          return (0x40, 0x20)
+        }
+        return(0x60, 0x20)
       }
+      // function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
+      case 0xc87b56dd {
+        // TODO: implement
+      }
+      
     }
   }
 }

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.9;
 
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import "hardhat/console.sol";
 
 contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
@@ -34,7 +36,12 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
   function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) external override {}
 
-  function supportsInterface(bytes4 _interfaceId) external view override returns (bool _supported) {}
+  function supportsInterface(bytes4 _interfaceId) external view override returns (bool _supported) {
+    console.logBytes4(type(IERC165).interfaceId);
+    console.logBytes4(type(IERC721).interfaceId);
+    console.logBytes4(type(IERC721Metadata).interfaceId);
+    return _interfaceId == type(IERC165).interfaceId || _interfaceId == type(IERC721).interfaceId || _interfaceId == type(IERC721Metadata).interfaceId;
+  }
 
   function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
 
