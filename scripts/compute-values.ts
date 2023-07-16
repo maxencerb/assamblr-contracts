@@ -24,6 +24,10 @@ async function main() {
     return acc;
   }, {} as Record<string, string>);
   console.log(JSON.stringify(eventHashes, null, 2));
+
+  // storage for baseURI
+  const baseURIStorage = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("storage.erc721.baseURI"));
+  console.log("baseURIStorage", baseURIStorage);
 }
 
 main()

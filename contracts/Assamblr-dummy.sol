@@ -62,4 +62,8 @@ contract AssamblrDummy is IERC721, IERC721Metadata, Pausable {
   function pause() public virtual {}
 
   function unpause() public virtual {}
+
+  function setBaseURI(string memory baseURI_) external virtual {}
+
+  function baseURI() external view virtual returns (string memory) {}
 }

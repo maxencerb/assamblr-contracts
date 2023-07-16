@@ -4,6 +4,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { concat, hexlify } from "ethers/lib/utils";
 
+const baseURI = "https://assamblr.maxencerb.com/api/v1/";
+
 describe("Assamblr", function () {
   
   async function deployAssamblrV1Fixture() {
@@ -159,6 +161,12 @@ describe("Assamblr", function () {
       await assamblrV1.mint();
       await assamblrV1.connect(other).mint()
       await expect(assamblrV1.connect(other).mint()).to.be.revertedWithoutReason();
+    });
+
+    it("Should set and read base URI correctly", async function () {
+      const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
+      await assamblrV1.connect(signer).setBaseURI(baseURI);
+      expect(await assamblrV1.baseURI()).to.equal(baseURI);
     });
   });
 });

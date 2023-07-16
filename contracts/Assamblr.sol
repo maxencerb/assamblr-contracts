@@ -489,6 +489,69 @@ contract Assamblr {
 
         return(0x00, 0x00)
       }
+      // base URI at 0xd7bb13ec486ed16fdf30f21c81b0b0901102df35ffc65a9e5359fdc2cc57b752 keccack256("storage.ERC721.baseURI")
+      // function setBaseURI(string memory baseURI_) external virtual {}
+      case 0x55f804b3 {
+        ensureOwner()
+        // storage slot for base URI
+        let baseURIStorageSlot := 0xd7bb13ec486ed16fdf30f21c81b0b0901102df35ffc65a9e5359fdc2cc57b752
+        // copy the string param starting from slot 0x20
+        calldatacopy(0x20, 0x04, sub(calldatasize(), 0x04))
+        // length of the string in the first word
+        let _start := add(mload(0x20), 0x20)
+        let len := mload(_start)
+
+        switch gt(len, 0x1F)
+        case 0x00 {
+          // if length is 31 bytes or less, store the string in the slot with the length in the last byte
+          // length * 2
+          sstore(baseURIStorageSlot, or(mload(add(_start, 0x20)), mul(len, 2)))
+        }
+        default {
+          // if more than 31 bytes, store length in the first word
+          // length * 2 + 1
+          sstore(baseURIStorageSlot, add(mul(len, 0x02), 0x01))
+          // store content in the next slot
+          let dataSlot := add(baseURIStorageSlot, 0x20)
+
+          for { let i := 0 } lt(mul(i, 0x20), len) { i := add(i, 0x01) } {
+            sstore(add(dataSlot, mul(i, 0x20)), mload(add(_start, add(0x20, mul(i, 0x20)))))
+          }
+        }
+      }
+      // function baseURI() external view virtual returns (string memory) {}
+      case 0x6c0360eb {
+        // storage slot for base URI
+        let baseURIStorageSlot := 0xd7bb13ec486ed16fdf30f21c81b0b0901102df35ffc65a9e5359fdc2cc57b752
+        // load the length
+        let len := sload(baseURIStorageSlot)
+        
+        switch and(len, 0x01)
+        case 0x00 {
+          // if length is 31 bytes or less, load the string from the slot
+          mstore(0x20, 0x20)
+          mstore(0x40, div(and(len, 0xff), 2))
+          mstore(0x60, and(len, not(0xff)))
+          return(0x20, 0x60)
+        }
+        default {
+          let decodedStringLength := div(len, 2)
+          let dataSlot := add(baseURIStorageSlot, 0x20)
+
+          mstore(0x20, 0x20)
+          mstore(0x40, decodedStringLength)
+
+          let returnDataSize := 0x40
+          
+          // Write to memory as many blocks of 32 bytes as necessary taken from data storage variable slot + i
+          for {let i := 0} lt(i, decodedStringLength) {i := add(i, 0x20)} {
+            mstore(add(0x60, i), sload(add(dataSlot, i)))
+            returnDataSize := add(returnDataSize, 0x20)
+          }
+
+          return(0x20, returnDataSize)
+        }
+      }
     }
   }
 }
