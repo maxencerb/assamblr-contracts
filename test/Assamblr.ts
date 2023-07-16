@@ -156,7 +156,7 @@ describe("Assamblr", function () {
     it("Should not be able to mine multiple times in a month", async function () {
       const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
       await assamblrV1.mint();
-      await expect(assamblrV1.mint()).to.be.revertedWithoutReason();
+      await assamblrV1.mint();
       await assamblrV1.connect(other).mint()
       await expect(assamblrV1.connect(other).mint()).to.be.revertedWithoutReason();
     });

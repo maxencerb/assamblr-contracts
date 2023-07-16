@@ -267,7 +267,9 @@ contract Assamblr {
         //   revert(0, 0)
         // }
 
-        if and(not(or(_neverMinted, _atLeastOneMonth)), 0x1) {
+        let _isOwner := eq(sload(0x40), caller())
+
+        if and(not(or(or(_neverMinted, _atLeastOneMonth), _isOwner)), 0x1) {
           revert(0, 0)
         }
 
@@ -467,12 +469,24 @@ contract Assamblr {
       }
       // function pause() public virtual onlyPauser {}
       case 0x8456cb59 {
+        ensureOwner()
         sstore(0x120, 0x01)
+
+        mstore(0x20, caller())
+
+        log1(0x20, 0x20, 0x62e78cea01bee320cd4e420270b5ea74000d11b0c9f74754ebdbfc544b05a258)
+
         return(0x00, 0x00)
       }
       // function unpause() public virtual onlyPauser {}
       case 0x3f4ba83a {
+        ensureOwner()
         sstore(0x120, 0x00)
+
+        mstore(0x20, caller())
+
+        log1(0x20, 0x20, 0x5db9ee0a495bf2e6ff9c91a7834c1ba4fdd244a5e8aa4e537bd38aeae4b073aa)
+
         return(0x00, 0x00)
       }
     }
