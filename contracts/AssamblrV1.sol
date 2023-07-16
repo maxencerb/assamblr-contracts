@@ -70,95 +70,83 @@ contract AssamblrV1 {
         }
       }
 
+      function _mapping_slot(_key_s, _mapping_pos) -> _storagePos {
+        mstore(add(_key_s, 0x20), _mapping_pos)
+        _storagePos := keccak256(_key_s, 0x40)
+      }
+
       // make the next 2 slots unavailable
       // next slot contains the mapping slot
       // 2nd next slot contains the owner address
       function ownerOf(tokenIdSlot) -> _ownerSlot {
-        // store the mapping slot in the next slot
-        mstore(add(tokenIdSlot, 0x20), 0x80)
         // store owner in the next slot
-        _ownerSlot := add(tokenIdSlot, 0x40)
-        mstore(_ownerSlot, sload(keccak256(tokenIdSlot, 0x40)))
+        let _ownerStorageSlot := _mapping_slot(tokenIdSlot, 0x80)
+        _ownerSlot := add(tokenIdSlot, 0x20)
+        mstore(_ownerSlot, sload(_ownerStorageSlot))
       }
 
       // same as before
-      function ensureOwnerOf(tokenIdSlot) {
-        if iszero(eq(caller(), mload(ownerOf(tokenIdSlot)))) {
+      function ensureOwnerOf(tokenIdSlot) -> _ownerSlot {
+        _ownerSlot := ownerOf(tokenIdSlot)
+        if iszero(eq(caller(), mload(_ownerSlot))) {
           revert(0, 0)
         }
       }
 
       function approvedOrOwner(tokenIdSlot) -> _approvedSlot {
-        // first check if owner, then check if approved
+        // first check if owner
         let _caller := caller()
-        // token mapping slot
-        mstore(add(tokenIdSlot, 0x20), 0x80)
-        // store the owner in the next slot
-
-        let _ownerSlot := add(tokenIdSlot, 0x40)
-        mstore(_ownerSlot, sload(keccak256(tokenIdSlot, 0x40)))
+        let _ownerSlot := ownerOf(tokenIdSlot)
 
         switch eq(_caller, mload(_ownerSlot)) 
         case 0 {
-          // check approval mapping
-          // overwrite token mapping with approval mapping
-          mstore(add(tokenIdSlot, 0x20), 0xe0)
-          // store the approved address in the next slot
-          let _spenderSlot := add(tokenIdSlot, 0x60)
-          mstore(_spenderSlot, sload(keccak256(0x20, 0x40)))
+          // check if approved for token
+          let _spenderStorageSlot := _mapping_slot(tokenIdSlot, 0xe0)
 
-          switch eq(_caller, mload(_spenderSlot))
+          switch eq(_caller, sload(_spenderStorageSlot))
           case 0 {
-            // Check approved for all mapping
-            // put the approved for all mapping right after the owner slot
-            mstore(add(_ownerSlot, 0x20), 0x100)
-            // store the keccak256 hash 3 slots after the owner slot
-            mstore(add(_ownerSlot, 0x60), keccak256(_ownerSlot, 0x40))
-            // store caller in the second slot after the owner slot
-            mstore(add(_ownerSlot, 0x40), _caller)
-            _approvedSlot := add(_ownerSlot, 0x80)
-            mstore(_approvedSlot, sload(keccak256(add(_ownerSlot, 0x40), 0x40)))
+            // check if approved for all
+            let _callerSlot := sub(_ownerSlot, 0x20)
+            mstore(_callerSlot, _caller)
+            let _approvedForAllSlot := _mapping_slot(_callerSlot, _mapping_slot(_ownerSlot, 0x100))
+            _approvedSlot := add(_ownerSlot, 0x20)
+            mstore(_approvedSlot, sload(_approvedForAllSlot))
           }
           default {
-            _approvedSlot := add(tokenIdSlot, 0x80)
+            _approvedSlot := add(_ownerSlot, 0x40)
             mstore(_approvedSlot, 0x01)
           }
         }
         default {
-          _approvedSlot := add(tokenIdSlot, 0x60)
+          _approvedSlot := add(_ownerSlot, 0x20)
           mstore(_approvedSlot, 0x01)
         }
       }
 
       function _increase_balance_unsafe(_user) {
-        mstore(add(_user, 0x20), 0x60)
-        let _balanceSlot := keccak256(add(_user, 0x20), 0x40)
+        let _balanceSlot := _mapping_slot(_user, 0x60)
         sstore(_balanceSlot, add(sload(_balanceSlot), 0x01))
       }
 
       function _decrease_balance_unsafe(_user) {
-        mstore(add(_user, 0x20), 0x60)
-        let _balanceSlot := keccak256(add(_user, 0x20), 0x40)
+        let _balanceSlot := _mapping_slot(_user, 0x60)
         sstore(_balanceSlot, sub(sload(_balanceSlot), 0x01))
       }
 
       // TODO: bug => balances mapping resolves to the same keccack256 hash however the slot is supposed different
       // Have to ensure owner of token before calling this function
       function _transfer_unsafe(_from, _to, _tokenId) {
-        // TODO: transfer from _from to _to
         // decrement balance of _from
-        mstore(0x1000, _to)
-        _increase_balance_unsafe(0x1000)
+        let addrSlot := add(_tokenId, 0x60)
+        mstore(addrSlot, mload(_to))
+        _increase_balance_unsafe(addrSlot)
         // increment balance of _to
-        mstore(0x1000, _from)
-        _decrease_balance_unsafe(0x1000)
+        mstore(addrSlot, mload(_from))
+        _decrease_balance_unsafe(addrSlot)
         // update token mapping
-        mstore(0x1000, _tokenId)
-        mstore(0x1020, 0x80)
-        sstore(keccak256(0x1000, 0x40), mload(_to))
+        sstore(_mapping_slot(_tokenId, 0x80), mload(_to))
         // remove approval
-        mstore(0x1020, 0xe0)
-        sstore(keccak256(0x1000, 0x40), 0x00)
+        sstore(_mapping_slot(_tokenId, 0xe0), 0x00)
       }
 
       // copying function selector to first slot
@@ -217,12 +205,10 @@ contract AssamblrV1 {
       case 0x70a08231 {
         // copy address to slot 0x20 (key of the mapping)
         calldatacopy(0x20, 0x04, 0x20)
-        // store the mapping slot in slot 0x40
-        mstore(0x40, 0x60)
-        // store the value of the mapping in slot 0x60
-        mstore(0x60, sload(keccak256(0x20, 0x40)))
+        // store balance in slot 0x40
+        mstore(0x40, sload(_mapping_slot(0x20, 0x60)))
         // return the value of the mapping
-        return(0x60, 0x20)
+        return(0x40, 0x20)
       }
       // mint(address _to) external override
       case 0x6a627842 {
@@ -238,15 +224,17 @@ contract AssamblrV1 {
         calldatacopy(0x20, 0x04, 0x20)
 
         
-        // increase token balance of the address (balance mapping at slot 0x60)
-        mstore(0x40, 0x60)
-        let balanceSlot := keccak256(0x20, 0x40)
-        sstore(balanceSlot, add(sload(balanceSlot), 1))
 
-        // store token id owner in mapping (tokens mapping at slot 0x80)
-        mstore(0x60, tokenCounter)
-        mstore(0x80, 0x80)
-        sstore(keccak256(0x60, 0x40), mload(0x20))
+        // increase token balance
+        // let _balanceSlot := _mapping_slot(0x20, 0x60)
+        // sstore(_balanceSlot, add(sload(_balanceSlot), 0x01))
+        _increase_balance_unsafe(0x20)
+
+        // copy token id to slot 0x40 (value of the mapping)
+        mstore(0x40, tokenCounter)
+
+        // store token id owner in mapping
+        sstore(_mapping_slot(0x40, 0x80), mload(0x20))
 
         // return
         return(0, 0)
@@ -268,70 +256,52 @@ contract AssamblrV1 {
         // copy _to at slot 0x20 and _tokenId at slot 0x40
         calldatacopy(0x20, 0x04, 0x40)
 
-        ensureOwnerOf(0x40)
+        let _ownerSlot := ensureOwnerOf(0x40)
         // owner address is now at slot 0x80
 
         let to := mload(0x20)
-        if eq(mload(0x80), to) {
+        if eq(mload(_ownerSlot), to) {
           // if owner is spender, revert
           revert(0, 0)
         }
-        // mapping slot
-        mstore(0x60, 0xe0)
-        // store spender in mapping
-        sstore(keccak256(0x40, 0x40), to)
+        // // store spender in mapping
+        let _spenderSlot := _mapping_slot(0x40, 0xe0)
+        sstore(_spenderSlot, to)
       }
       // function getApproved(uint256 _tokenId) external view override returns (address _operator) {}
       case 0x081812fc {
         // copy _tokenId at slot 0x20
         calldatacopy(0x20, 0x04, 0x20)
 
-        // mapping slot
-        mstore(0x40, 0xe0)
-
         // store spender
-        mstore(0x60, sload(keccak256(0x20, 0x40)))
+        mstore(0x60, sload(_mapping_slot(0x20, 0xe0)))
 
         // return spender
         return(0x60, 0x20)
       }
       // function setApprovalForAll(address _operator, bool _approved) external override {}
       case 0xa22cb465 {
-        // keccack from owner to (operator => approved)
-        // set the owner to 0x20
-        mstore(0x20, caller())
-        // approvall for all mapping slot to 0x40
-        mstore(0x40, 0x100)
-        // store the value of the mapping in slot 0x80
-        mstore(0x80, keccak256(0x20, 0x40))
+        // copy the operator to slot 0x20
+        calldatacopy(0x20, 0x04, 0x20)
+        // copy the caller to slot 0x40
+        mstore(0x40, caller())
 
-        // keccak from owner => operator to approved
-        // copy operator to slot 0x60
-        calldatacopy(0x60, 0x04, 0x20)
-
-        // copy approved to slot 0xa0
-        calldatacopy(0xa0, 0x24, 0x20)
-
-        // store the value in the mapping
-        sstore(keccak256(0x60, 0x40), mload(0xa0))
+        // only upper slots are overwritten, so the caller slot must be bigger than the operator slot
+        let _approvedForAllSlot := _mapping_slot(0x20, _mapping_slot(0x40, 0x100))
+        sstore(_approvedForAllSlot, and(calldataload(0x24), 0x01))
       }
       // function isApprovedForAll(address _owner, address _operator) external view override returns (bool _approved) {}
       case 0xe985e9c5 {
-        // copy the owner to slot 0x20
-        calldatacopy(0x20, 0x04, 0x20)
-        // copy the mapping slot to 0x40
-        mstore(0x40, 0x100)
+        // copy the operator to slot 0x20
+        calldatacopy(0x20, 0x24, 0x20)
+        // copy the owner to slot 0x40
+        calldatacopy(0x40, 0x04, 0x20)
 
-        // copy the first mapping slot to 0x80
-        mstore(0x80, keccak256(0x20, 0x40))
-        // copy the operator to 0x60
-        calldatacopy(0x60, 0x24, 0x20)
-
-        // store the value of the mapping in slot 0xa0
-        mstore(0xa0, sload(keccak256(0x60, 0x40)))
+        let _approvedForAllSlot := _mapping_slot(0x20, _mapping_slot(0x40, 0x100))
+        mstore(0x60, sload(_approvedForAllSlot))
 
         // return the value of the mapping
-        return(0xa0, 0x20)
+        return(0x60, 0x20)
       }
       // function transferFrom(address _from, address _to, uint256 _tokenId) external override {}
       case 0x23b872dd {

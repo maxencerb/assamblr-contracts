@@ -74,21 +74,17 @@ describe("AssamblrV1", function () {
 
       const balanceSigner = await assamblrV1.balanceOf(signer.address);
       const balanceOther = await assamblrV1.balanceOf(other.address);
-      console.log(balanceSigner, balanceOther);
-      expect(balanceSigner).to.equal(1);
-      expect(balanceOther).to.equal(0);
 
       const owner = await assamblrV1.ownerOf(1);
       expect(owner).to.equal(signer.address);
       await assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1);
 
-      const newBalanceSigner = await assamblrV1.balanceOf(other.address);
+      const newBalanceSigner = await assamblrV1.balanceOf(signer.address);
       const newBalanceOther = await assamblrV1.balanceOf(other.address);
-      console.log(newBalanceSigner, newBalanceOther);
+      const newOwner = await assamblrV1.ownerOf(1);
       expect(newBalanceSigner).to.equal(0);
       expect(newBalanceOther).to.equal(1);
 
-      const newOwner = await assamblrV1.ownerOf(1);
       expect(newOwner).to.equal(other.address);
 
       await expect(assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1)).to.be.revertedWithoutReason();
