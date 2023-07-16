@@ -4,9 +4,6 @@ pragma solidity ^0.8.9;
 import "hardhat/console.sol";
 
 contract AssamblrV1 {
-
-  event Upgraded(address indexed implementation);
-    
   // name variable (must be less than 32 bytes)
   // slot 0 0x00
 
@@ -49,9 +46,13 @@ contract AssamblrV1 {
 
       // store dummy implementation
       sstore(0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc, _dummyImpl)
-    }
 
-    emit Upgraded(_dummyImpl);
+      // emit event Upgraded
+      log2(0x00, 0x00, 0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b, _dummyImpl)
+
+      // emit OwnershipTransferred
+      log3(0x00, 0x00, 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0, 0x00, caller())
+    }
   }
 
   fallback() external payable {
@@ -190,8 +191,14 @@ contract AssamblrV1 {
         // check if caller is owner
         ensureOwner()
 
+        let _prevOwner := sload(0x40)
+        let _newOwner := calldataload(0x04)
+
         // store new owner
-        sstore(0x40, calldataload(0x04))
+        sstore(0x40, _newOwner)
+
+        // emit event
+        log3(0x00, 0x00, 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0, _prevOwner, _newOwner)
 
         // return
         return(0, 0)
@@ -201,8 +208,12 @@ contract AssamblrV1 {
         // check if caller is owner
         ensureOwner()
 
+        let _prevOwner := sload(0x40)
         // store new owner
-        sstore(0x40, 0)
+        sstore(0x40, 0x00)
+
+        // emit event
+        log3(0x00, 0x00, 0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0, _prevOwner, 0x00)
 
         // return
         return(0, 0)
@@ -265,17 +276,19 @@ contract AssamblrV1 {
         // copy _to at slot 0x20 and _tokenId at slot 0x40
         calldatacopy(0x20, 0x04, 0x40)
 
-        let _ownerSlot := ensureOwnerOf(0x40)
+        let _owner := mload(ensureOwnerOf(0x40))
         // owner address is now at slot 0x80
 
         let to := mload(0x20)
-        if eq(mload(_ownerSlot), to) {
+        if eq(_owner, to) {
           // if owner is spender, revert
           revert(0, 0)
         }
         // // store spender in mapping
         let _spenderSlot := _mapping_slot(0x40, 0xe0)
         sstore(_spenderSlot, to)
+        // fire Approval event
+        log4(0x00, 0x00, 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925, _owner, to, mload(0x40))
       }
       // function getApproved(uint256 _tokenId) external view override returns (address _operator) {}
       case 0x081812fc {
@@ -298,6 +311,11 @@ contract AssamblrV1 {
         // only upper slots are overwritten, so the caller slot must be bigger than the operator slot
         let _approvedForAllSlot := _mapping_slot(0x20, _mapping_slot(0x40, 0x100))
         sstore(_approvedForAllSlot, and(calldataload(0x24), 0x01))
+
+        calldatacopy(0x60, 0x24, 0x20)
+
+        // fire ApprovalForAll event
+        log3(0x60, 0x20, 0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31, caller(), calldataload(0x04))
       }
       // function isApprovedForAll(address _owner, address _operator) external view override returns (bool _approved) {}
       case 0xe985e9c5 {
