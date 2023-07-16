@@ -10,6 +10,8 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
   event Upgraded(address indexed implementation);
 
+  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
   constructor(string memory _name, string memory _symbol, address _dummyImpl) {}
 
   function name() external view override returns (string memory _name) {}
@@ -51,7 +53,6 @@ contract AssamblrV1Dummy is IERC721, IERC721Metadata {
 
   function renounceOwnership() public virtual {}
 
-  event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
   function mint(address to) public virtual {}
 }

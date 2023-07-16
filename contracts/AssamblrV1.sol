@@ -97,18 +97,22 @@ contract AssamblrV1 {
         // first check if owner
         let _caller := caller()
         let _ownerSlot := ownerOf(tokenIdSlot)
+        let _owner := mload(_ownerSlot)
 
-        switch eq(_caller, mload(_ownerSlot)) 
+        switch eq(_caller, _owner) 
         case 0 {
           // check if approved for token
           let _spenderStorageSlot := _mapping_slot(tokenIdSlot, 0xe0)
 
           switch eq(_caller, sload(_spenderStorageSlot))
           case 0 {
-            // check if approved for all
-            let _callerSlot := sub(_ownerSlot, 0x20)
-            mstore(_callerSlot, _caller)
-            let _approvedForAllSlot := _mapping_slot(_callerSlot, _mapping_slot(_ownerSlot, 0x100))
+            // approval for all
+            let _baseSlot := add(tokenIdSlot, 0x20)
+            // store operator at _baseSlot
+            mstore(_baseSlot, _caller)
+            // store owner at _baseSlot + 0x20
+            mstore(add(_baseSlot, 0x20), _owner)
+            let _approvedForAllSlot := _mapping_slot(_baseSlot, _mapping_slot(add(_baseSlot, 0x20), 0x100))
             _approvedSlot := add(_ownerSlot, 0x20)
             mstore(_approvedSlot, sload(_approvedForAllSlot))
           }
@@ -137,7 +141,7 @@ contract AssamblrV1 {
       // Have to ensure owner of token before calling this function
       function _transfer_unsafe(_from, _to, _tokenId) {
         // decrement balance of _from
-        let addrSlot := add(_tokenId, 0x60)
+        let addrSlot := add(msize(), 0x20)
         mstore(addrSlot, mload(_to))
         _increase_balance_unsafe(addrSlot)
         // increment balance of _to
@@ -147,6 +151,8 @@ contract AssamblrV1 {
         sstore(_mapping_slot(_tokenId, 0x80), mload(_to))
         // remove approval
         sstore(_mapping_slot(_tokenId, 0xe0), 0x00)
+        // emit transfer event
+        log4(0x00, 0x00, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, mload(_from), mload(_to), mload(_tokenId))
       }
 
       // copying function selector to first slot
@@ -235,6 +241,9 @@ contract AssamblrV1 {
 
         // store token id owner in mapping
         sstore(_mapping_slot(0x40, 0x80), mload(0x20))
+
+        // emit transfer event
+        log4(0x00, 0x00, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, 0x00, mload(0x20), tokenCounter)
 
         // return
         return(0, 0)

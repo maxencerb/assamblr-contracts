@@ -70,14 +70,17 @@ describe("AssamblrV1", function () {
 
     it("Should transfer tokens", async function () {
       const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
-      await assamblrV1.mint(signer.address);
+      await expect(assamblrV1.mint(signer.address)).to.emit(assamblrV1, "Transfer").withArgs(ethers.constants.AddressZero, signer.address, 1);
 
       const balanceSigner = await assamblrV1.balanceOf(signer.address);
       const balanceOther = await assamblrV1.balanceOf(other.address);
 
+      expect(balanceSigner).to.equal(1);
+      expect(balanceOther).to.equal(0);
+
       const owner = await assamblrV1.ownerOf(1);
       expect(owner).to.equal(signer.address);
-      await assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1);
+      await expect(assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1)).to.emit(assamblrV1, "Transfer").withArgs(signer.address, other.address, 1);
 
       const newBalanceSigner = await assamblrV1.balanceOf(signer.address);
       const newBalanceOther = await assamblrV1.balanceOf(other.address);
@@ -88,6 +91,59 @@ describe("AssamblrV1", function () {
       expect(newOwner).to.equal(other.address);
 
       await expect(assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1)).to.be.revertedWithoutReason();
+    });
+
+    it("Should work with approvals", async function () {
+      const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
+      await expect(assamblrV1.mint(signer.address)).to.emit(assamblrV1, "Transfer").withArgs(ethers.constants.AddressZero, signer.address, 1);
+      await expect(assamblrV1.mint(signer.address)).to.emit(assamblrV1, "Transfer").withArgs(ethers.constants.AddressZero, signer.address, 2);
+
+      await assamblrV1.connect(signer).approve(other.address, 1);
+
+      const _spender = await assamblrV1.getApproved(1);
+      expect(_spender).to.equal(other.address);
+      const _spender2 = await assamblrV1.getApproved(2);
+      expect(_spender2).to.equal(ethers.constants.AddressZero);
+
+      await expect(assamblrV1.connect(other).transferFrom(signer.address, other.address, 2)).to.be.revertedWithoutReason();
+      await assamblrV1.connect(other).transferFrom(signer.address, other.address, 1);
+      
+
+      const newOwner = await assamblrV1.ownerOf(1);
+      expect(newOwner).to.equal(other.address);
+
+      const _newSpender = await assamblrV1.getApproved(1);
+      expect(_newSpender).to.equal(ethers.constants.AddressZero);
+    });
+
+    it("Should work with global approvals", async function () {
+      const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
+      await assamblrV1.mint(signer.address);
+      await assamblrV1.mint(signer.address);
+      await assamblrV1.mint(signer.address);
+
+      const _spender = await assamblrV1.isApprovedForAll(signer.address, other.address);
+      expect(_spender).to.equal(false);
+
+      await assamblrV1.connect(signer).setApprovalForAll(other.address, true);
+
+      const _spenderNew = await assamblrV1.isApprovedForAll(signer.address, other.address);
+      expect(_spenderNew).to.equal(true);
+
+      await assamblrV1.connect(other).transferFrom(signer.address, other.address, 1);
+      await assamblrV1.connect(other).transferFrom(signer.address, other.address, 2);
+
+      const newOwner = await assamblrV1.ownerOf(1);
+      expect(newOwner).to.equal(other.address);
+      const newOwner2 = await assamblrV1.ownerOf(2);
+      expect(newOwner2).to.equal(other.address);
+
+      await assamblrV1.connect(signer).setApprovalForAll(other.address, false);
+
+      const _spenderNew2 = await assamblrV1.isApprovedForAll(signer.address, other.address);
+      expect(_spenderNew2).to.equal(false);
+
+      await expect(assamblrV1.connect(other).transferFrom(signer.address, other.address, 3)).to.be.revertedWithoutReason();
     });
   });
 });

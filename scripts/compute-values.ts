@@ -5,9 +5,9 @@ async function main() {
   const contract = await ethers.getContractFactory("AssamblrV1Dummy");
 
   // Just to get the contract interface
-  // const contractInstance = contract.attach(signer.address);
-  const contractInstance = await contract.deploy("AssamblrV1", "ASSM", signer.address);
-  await contractInstance.deployed();
+  const contractInstance = contract.attach(signer.address);
+  // const contractInstance = await contract.deploy("AssamblrV1", "ASSM", signer.address);
+  // await contractInstance.deployed();
 
   const sigs = Object.keys(contractInstance.interface.functions);
 
@@ -18,10 +18,12 @@ async function main() {
 
   console.log(JSON.stringify(sigHashes, null, 2));
 
-  const txData = contractInstance.interface.encodeFunctionData("setApprovalForAll", [signer.address, true]);
-  console.log(txData);
-
-  const interfaces = await contractInstance.supportsInterface("0x01ffc9a7");
+  const events = Object.keys(contractInstance.interface.events);
+  const eventHashes = events.reduce((acc, event) => {
+    acc[event] = contract.interface.getEventTopic(event);
+    return acc;
+  }, {} as Record<string, string>);
+  console.log(JSON.stringify(eventHashes, null, 2));
 }
 
 main()
