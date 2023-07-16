@@ -5,7 +5,7 @@ pragma solidity ^0.8.9;
 // this is a base ERC721 with metadata (token URI not implemented)
 // The owner of the contract has no specific role 
 
-contract AssamblrV1 {
+contract Assamblr {
   // name variable (must be less than 32 bytes)
   // slot 0 0x00
 
@@ -28,6 +28,12 @@ contract AssamblrV1 {
   // approval mapping (uint256 => address) slot 7 0xe0
 
   // approval for all mapping (address => (address => bool)) slot 8 0x100
+
+  // specifics
+
+  // paused slot 9 0x120
+
+  // last block minted (address => uint256) slot 10 0x140
 
   constructor(string memory _name, string memory _symbol, address _dummyImpl) {
     assembly {
@@ -158,6 +164,25 @@ contract AssamblrV1 {
         log4(0x00, 0x00, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, mload(_from), mload(_to), mload(_tokenId))
       }
 
+      function ensureNotPaused() {
+        if sload(0x120) {
+          revert(0, 0)
+        }
+      }
+
+      function lastMint() -> _lastMintBlock {
+        let _callerSlot := add(msize(), 0x20)
+        mstore(_callerSlot, caller())
+        let _lastMintBlockStorage := _mapping_slot(_callerSlot, 0x140)
+        _lastMintBlock := sload(_lastMintBlockStorage)
+      }
+
+      function setLastMintofCaller() {
+        let _callerSlot := add(msize(), 0x20)
+        mstore(_callerSlot, caller())
+        sstore(_mapping_slot(_callerSlot, 0x140), number())
+      }
+
       // copying function selector to first slot
       // Selector is 4 bytes so we store starting from 0x1c
       // it will padd the first 0x1c bytes with 0s
@@ -229,10 +254,23 @@ contract AssamblrV1 {
         // return the value of the mapping
         return(0x40, 0x20)
       }
-      // mint(address _to) external override
-      case 0x6a627842 {
-        // check if caller is owner
-        ensureOwner()
+      // mint() external override
+      case 0x1249c58b {
+        // check if mint is paused
+        ensureNotPaused()
+
+        let _lastMintedBlock := lastMint()
+        let _neverMinted := eq(_lastMintedBlock, 0x00)
+        let _atLeastOneMonth := gt(sub(number(), _lastMintedBlock), 0x13c680) // 1 month in blocks
+
+        // if and(not(_neverMinted), not(_atLeastOneMonth)) {
+        //   revert(0, 0)
+        // }
+
+        if and(not(or(_neverMinted, _atLeastOneMonth)), 0x1) {
+          revert(0, 0)
+        }
+
 
         let tokenCounter := add(sload(0xa0), 1)
         // increase token counter
@@ -240,9 +278,7 @@ contract AssamblrV1 {
         
         
         // copy address to slot 0x20 (key of the mapping)
-        calldatacopy(0x20, 0x04, 0x20)
-
-        
+        mstore(0x20, caller())
 
         // increase token balance
         // let _balanceSlot := _mapping_slot(0x20, 0x60)
@@ -254,6 +290,9 @@ contract AssamblrV1 {
 
         // store token id owner in mapping
         sstore(_mapping_slot(0x40, 0x80), mload(0x20))
+
+        // set last mint
+        setLastMintofCaller()
 
         // emit transfer event
         log4(0x00, 0x00, 0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef, 0x00, mload(0x20), tokenCounter)
@@ -418,6 +457,23 @@ contract AssamblrV1 {
       // function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
       case 0xc87b56dd {
         // TODO: implement
+      }
+
+      // specifics
+      // function paused() public view virtual returns (bool) {}
+      case 0x5c975abb {
+        mstore(0x20, sload(0x120))
+        return(0x20, 0x20)
+      }
+      // function pause() public virtual onlyPauser {}
+      case 0x8456cb59 {
+        sstore(0x120, 0x01)
+        return(0x00, 0x00)
+      }
+      // function unpause() public virtual onlyPauser {}
+      case 0x3f4ba83a {
+        sstore(0x120, 0x00)
+        return(0x00, 0x00)
       }
     }
   }

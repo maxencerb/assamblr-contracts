@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 
 async function main() {
   const [ signer ] = await ethers.getSigners();
-  const contract = await ethers.getContractFactory("AssamblrV1Dummy");
+  const contract = await ethers.getContractFactory("AssamblrDummy");
 
   // Just to get the contract interface
   const contractInstance = contract.attach(signer.address);
