@@ -78,7 +78,7 @@ contract AssamblrV1 {
         mstore(add(tokenIdSlot, 0x20), 0x80)
         // store owner in the next slot
         _ownerSlot := add(tokenIdSlot, 0x40)
-        mstore(_ownerSlot, sload(keccak256(0x20, 0x40)))
+        mstore(_ownerSlot, sload(keccak256(tokenIdSlot, 0x40)))
       }
 
       // same as before
@@ -96,7 +96,7 @@ contract AssamblrV1 {
         // store the owner in the next slot
 
         let _ownerSlot := add(tokenIdSlot, 0x40)
-        mstore(_ownerSlot, sload(keccak256(0x20, 0x40)))
+        mstore(_ownerSlot, sload(keccak256(tokenIdSlot, 0x40)))
 
         switch eq(_caller, mload(_ownerSlot)) 
         case 0 {
@@ -130,18 +130,28 @@ contract AssamblrV1 {
         }
       }
 
+      function _increase_balance_unsafe(_user) {
+        mstore(add(_user, 0x20), 0x60)
+        let _balanceSlot := keccak256(add(_user, 0x20), 0x40)
+        sstore(_balanceSlot, add(sload(_balanceSlot), 0x01))
+      }
+
+      function _decrease_balance_unsafe(_user) {
+        mstore(add(_user, 0x20), 0x60)
+        let _balanceSlot := keccak256(add(_user, 0x20), 0x40)
+        sstore(_balanceSlot, sub(sload(_balanceSlot), 0x01))
+      }
+
+      // TODO: bug => balances mapping resolves to the same keccack256 hash however the slot is supposed different
       // Have to ensure owner of token before calling this function
       function _transfer_unsafe(_from, _to, _tokenId) {
         // TODO: transfer from _from to _to
         // decrement balance of _from
-        mstore(0x1000, mload(_from))
-        mstore(0x1020, 0x60)
-        let _balanceSlot := keccak256(0x1000, 0x40)
-        sstore(_balanceSlot, sub(sload(_balanceSlot), 0x01))
+        mstore(0x1000, _to)
+        _increase_balance_unsafe(0x1000)
         // increment balance of _to
-        mstore(0x1000, mload(_to))
-        _balanceSlot := keccak256(0x1000, 0x40)
-        sstore(_balanceSlot, add(sload(_balanceSlot), 0x01))
+        mstore(0x1000, _from)
+        _decrease_balance_unsafe(0x1000)
         // update token mapping
         mstore(0x1000, _tokenId)
         mstore(0x1020, 0x80)
@@ -236,7 +246,7 @@ contract AssamblrV1 {
         // store token id owner in mapping (tokens mapping at slot 0x80)
         mstore(0x60, tokenCounter)
         mstore(0x80, 0x80)
-        sstore(keccak256(0x60, 0x20), mload(0x20))
+        sstore(keccak256(0x60, 0x40), mload(0x20))
 
         // return
         return(0, 0)
@@ -329,7 +339,7 @@ contract AssamblrV1 {
         calldatacopy(0x20, 0x04, 0x60)
         
         // check if the caller is approved for the tokenId
-        if iszero(mload(approvedOrOwner(0x20))) {
+        if iszero(mload(approvedOrOwner(0x60))) {
           revert(0, 0)
         }
 

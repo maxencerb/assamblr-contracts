@@ -58,7 +58,7 @@ describe("AssamblrV1", function () {
     });
   });
 
-  describe("Minting", function () {
+  describe("Actions", function () {
     it("Should mint tokens", async function () {
       const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
       const balance = await assamblrV1.balanceOf(other.address);
@@ -66,6 +66,32 @@ describe("AssamblrV1", function () {
       await assamblrV1.connect(signer).mint(other.address);
       const newBalance = await assamblrV1.balanceOf(other.address);
       expect(newBalance).to.equal(1);
+    });
+
+    it("Should transfer tokens", async function () {
+      const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
+      await assamblrV1.mint(signer.address);
+
+      const balanceSigner = await assamblrV1.balanceOf(signer.address);
+      const balanceOther = await assamblrV1.balanceOf(other.address);
+      console.log(balanceSigner, balanceOther);
+      expect(balanceSigner).to.equal(1);
+      expect(balanceOther).to.equal(0);
+
+      const owner = await assamblrV1.ownerOf(1);
+      expect(owner).to.equal(signer.address);
+      await assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1);
+
+      const newBalanceSigner = await assamblrV1.balanceOf(other.address);
+      const newBalanceOther = await assamblrV1.balanceOf(other.address);
+      console.log(newBalanceSigner, newBalanceOther);
+      expect(newBalanceSigner).to.equal(0);
+      expect(newBalanceOther).to.equal(1);
+
+      const newOwner = await assamblrV1.ownerOf(1);
+      expect(newOwner).to.equal(other.address);
+
+      await expect(assamblrV1.connect(signer).transferFrom(signer.address, other.address, 1)).to.be.revertedWithoutReason();
     });
   });
 });
