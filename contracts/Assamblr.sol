@@ -183,6 +183,44 @@ contract Assamblr {
         sstore(_mapping_slot(_callerSlot, 0x140), number())
       }
 
+      function mathlog10(_v) -> _res {
+        _res := 0x00
+        // 1e64
+        if gt(_v, sub(0x184f03e93ff9f50000000000000000000000000000000000000000, 0x1)) {
+          _res := add(_res, 0x40)
+          _v := div(_v, 0x184f03e93ff9f50000000000000000000000000000000000000000)
+        }
+        // 1e32
+        if gt(_v, sub(0x4ee2d6d415b85c0000000000000, 0x1)) {
+          _res := add(_res, 0x20)
+          _v := div(_v, 0x4ee2d6d415b85c0000000000000)
+        }
+        // 1e16
+        if gt(_v, sub(0x2386f26fc10000, 0x1)) {
+          _res := add(_res, 0x10)
+          _v := div(_v, 0x2386f26fc10000)
+        }
+        // 1e8
+        if gt(_v, sub(0x5f5e100, 0x1)) {
+          _res := add(_res, 0x08)
+          _v := div(_v, 0x5f5e100)
+        }
+        // 1e4
+        if gt(_v, sub(0x2710, 0x1)) {
+          _res := add(_res, 0x04)
+          _v := div(_v, 0x2710)
+        }
+        // 1e2
+        if gt(_v, 0x63) {
+          _res := add(_res, 0x02)
+          _v := div(_v, 0x64)
+        }
+        // 1e1
+        if gt(_v, 0x09) {
+          _res := add(_res, 0x01)
+        }
+      }
+
       // copying function selector to first slot
       // Selector is 4 bytes so we store starting from 0x1c
       // it will padd the first 0x1c bytes with 0s
@@ -456,10 +494,7 @@ contract Assamblr {
         }
         return(0x60, 0x20)
       }
-      // function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
-      case 0xc87b56dd {
-        // TODO: implement
-      }
+      
 
       // specifics
       // function paused() public view virtual returns (bool) {}
@@ -551,6 +586,67 @@ contract Assamblr {
 
           return(0x20, returnDataSize)
         }
+      }
+      // function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
+      case 0xc87b56dd {
+        // storage slot for base URI
+        let baseURIStorageSlot := 0xd7bb13ec486ed16fdf30f21c81b0b0901102df35ffc65a9e5359fdc2cc57b752
+        // load the length
+        let len := sload(baseURIStorageSlot)
+
+        let _lenSlot := 0x40
+        let _dataSlot := 0x60
+
+        let decodedStringLength
+
+        let returnDataSize
+        
+        switch and(len, 0x01)
+        case 0x00 {
+          // if length is 31 bytes or less, load the string from the slot
+          mstore(0x20, 0x20)
+          decodedStringLength := div(and(len, 0xff), 2)
+          mstore(_lenSlot, decodedStringLength)
+          mstore(_dataSlot, and(len, not(0xff)))
+          returnDataSize := 0x60
+        }
+        default {
+          decodedStringLength := div(len, 2)
+          let dataSlot := add(baseURIStorageSlot, 0x20)
+
+          mstore(0x20, 0x20)
+          mstore(0x40, decodedStringLength)
+
+          returnDataSize := 0x40
+          
+          // Write to memory as many blocks of 32 bytes as necessary taken from data storage variable slot + i
+          for {let i := 0} lt(i, decodedStringLength) {i := add(i, 0x20)} {
+            mstore(add(_dataSlot, i), sload(add(dataSlot, i)))
+            returnDataSize := add(returnDataSize, 0x20)
+          }
+        }
+
+        // 0123456789abcdef
+        let symbols := shl(0x80, 0x30313233343536373839616263646566)
+
+        // load the token id
+        let _tokenId := calldataload(0x04)
+        let _tokenStrLen := add(mathlog10(_tokenId), 0x01)
+        let ptr := sub(add(add(_dataSlot, decodedStringLength), _tokenStrLen), 0x1)
+
+        for { } _tokenId { ptr := sub(ptr, 0x01) } {
+          mstore8(ptr, byte(mod(_tokenId, 10), symbols))
+          // mstore8(ptr, 0x30)
+          _tokenId := div(_tokenId, 0x0a)
+        }
+
+        mstore(_lenSlot, add(mload(_lenSlot), _tokenStrLen))
+
+        for {  } gt(add(mload(_lenSlot), 0x40), returnDataSize) { } {
+          returnDataSize := add(returnDataSize, 0x20)
+        }
+
+        return (0x20, returnDataSize)
       }
     }
   }

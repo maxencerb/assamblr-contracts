@@ -28,6 +28,10 @@ async function main() {
   // storage for baseURI
   const baseURIStorage = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("storage.erc721.baseURI"));
   console.log("baseURIStorage", baseURIStorage);
+
+  const symbols = "0123456789abcdef";
+  const symbolsUTF8 = Buffer.from(ethers.utils.toUtf8Bytes(symbols)).toString("hex");
+  console.log("symbolsUTF8", symbolsUTF8);
 }
 
 main()
