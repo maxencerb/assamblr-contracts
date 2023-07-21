@@ -169,7 +169,6 @@ describe("Assamblr", function () {
       const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
       await assamblrV1.connect(signer).setBaseURI(baseURI);
       expect(await assamblrV1.baseURI()).to.equal(baseURI);
-      console.log(await assamblrV1.tokenURI("125453234532134211297123719"));
     });
   });
 });

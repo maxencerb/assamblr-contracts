@@ -519,6 +519,13 @@ contract Assamblr {
       }
       // function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
       case 0xc87b56dd {
+        let _tokenId := calldataload(0x04)
+
+        let _owner := ownerOf(_tokenId)
+        if iszero(_owner) {
+          revert(0, 0)
+        }
+
         // storage slot for base URI
         let baseURIStorageSlot := 0xd7bb13ec486ed16fdf30f21c81b0b0901102df35ffc65a9e5359fdc2cc57b752
         // load the length
@@ -560,7 +567,6 @@ contract Assamblr {
         let symbols := shl(0x80, 0x30313233343536373839616263646566)
 
         // load the token id
-        let _tokenId := calldataload(0x04)
         let _tokenStrLen := add(mathlog10(_tokenId), 0x01)
         let ptr := sub(add(add(_dataSlot, decodedStringLength), _tokenStrLen), 0x1)
 
