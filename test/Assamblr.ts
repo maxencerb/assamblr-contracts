@@ -68,6 +68,8 @@ describe("Assamblr", function () {
       await assamblrV1.connect(other).mint();
       const newBalance = await assamblrV1.balanceOf(other.address);
       expect(newBalance).to.equal(1);
+      const owner = await assamblrV1.ownerOf(1);
+      expect(owner).to.equal(other.address);
     });
 
     it("Should transfer tokens", async function () {
