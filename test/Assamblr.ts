@@ -68,6 +68,8 @@ describe("Assamblr", function () {
       await assamblrV1.connect(other).mint();
       const newBalance = await assamblrV1.balanceOf(other.address);
       expect(newBalance).to.equal(1);
+      const owner = await assamblrV1.ownerOf(1);
+      expect(owner).to.equal(other.address);
     });
 
     it("Should transfer tokens", async function () {
@@ -167,7 +169,6 @@ describe("Assamblr", function () {
       const { assamblrV1, signer, other } = await loadFixture(deployAssamblrV1Fixture);
       await assamblrV1.connect(signer).setBaseURI(baseURI);
       expect(await assamblrV1.baseURI()).to.equal(baseURI);
-      console.log(await assamblrV1.tokenURI("125453234532134211297123719"));
     });
   });
 });
