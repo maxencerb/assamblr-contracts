@@ -6,8 +6,6 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 
-import "hardhat/console.sol";
-
 
 contract AssamblrDummy is IERC721, IERC721Metadata, Pausable {
 
@@ -41,12 +39,7 @@ contract AssamblrDummy is IERC721, IERC721Metadata, Pausable {
 
   function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes memory _data) external override {}
 
-  function supportsInterface(bytes4 _interfaceId) external view override returns (bool _supported) {
-    console.logBytes4(type(IERC165).interfaceId);
-    console.logBytes4(type(IERC721).interfaceId);
-    console.logBytes4(type(IERC721Metadata).interfaceId);
-    return _interfaceId == type(IERC165).interfaceId || _interfaceId == type(IERC721).interfaceId || _interfaceId == type(IERC721Metadata).interfaceId;
-  }
+  function supportsInterface(bytes4 _interfaceId) external view override returns (bool _supported) {}
 
   function tokenURI(uint256 _tokenId) external view override returns (string memory _tokenURI) {}
 

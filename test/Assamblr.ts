@@ -162,7 +162,7 @@ describe("Assamblr", function () {
       await assamblrV1.mint();
       await assamblrV1.mint();
       await assamblrV1.connect(other).mint()
-      await expect(assamblrV1.connect(other).mint()).to.be.revertedWithoutReason();
+      await expect(assamblrV1.connect(other).mint()).to.be.revertedWithoutReason(); 
     });
 
     it("Should set and read base URI correctly", async function () {
