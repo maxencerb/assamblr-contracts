@@ -1,23 +1,30 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying contracts with the account:", deployer.address);
 
-  const lockedAmount = ethers.utils.parseEther("1");
+  const Assamblr = await ethers.getContractFactory("Assamblr");
+  const AssamblrDummy = await ethers.getContractFactory("AssamblrDummy");
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  console.log("Deploying AssamblrDummy...");
+  const assamblrDummy = await AssamblrDummy.deploy("Assamblr", "ASBLR", deployer.address);
+  console.log("AssamblrDummy deployed to:", assamblrDummy.address);
 
-  await lock.deployed();
-
-  console.log(`Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`);
+  console.log("Deploying Assamblr...");
+  const assamblr = await Assamblr.deploy("Assamblr", "ASBLR", assamblrDummy.address);
+  console.log("Assamblr deployed to:", assamblr.address);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
+
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+
+// Deploying contracts with the account: 0x5D1E6Fe9df6b8a68B30F06Bd3f8a997cf59e1C95
+// Deploying AssamblrDummy...
+// AssamblrDummy deployed to: 0x7a01AF8135bDE8D903C86AE540107b4AA6CC1Cb7
+// Deploying Assamblr...
+// Assamblr deployed to: 0x38870BF40e6B149Acd01305EBAe044D728fF7e7e
